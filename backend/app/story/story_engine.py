@@ -1,5 +1,7 @@
 from math import radians, cos, sin, sqrt, atan2
 from app.story.llm_connector import call_llm
+import json
+import re
 
 
 def compute_distance(lat1, lon1, lat2, lon2):
@@ -11,6 +13,97 @@ def compute_distance(lat1, lon1, lat2, lon2):
          cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2)
     c = 2 * atan2(sqrt(a), sqrt(1-a))
     return R * c
+
+
+def parse_narrative_sections(narrative_str):
+    """
+    Parse narrative markdown into structured sections.
+    Expected format:
+    # Section Title
+    Section content...
+    
+    # Another Section
+    More content...
+    """
+    sections = {}
+    current_section = None
+    current_content = []
+    
+    lines = narrative_str.split('\n')
+    
+    for line in lines:
+        if line.startswith('# '):
+            # Save previous section if exists
+            if current_section:
+                sections[current_section] = '\n'.join(current_content).strip()
+            # Start new section
+            current_section = line.replace('# ', '').strip()
+            current_content = []
+        elif current_section:
+            current_content.append(line)
+    
+    # Save last section
+    if current_section:
+        sections[current_section] = '\n'.join(current_content).strip()
+    
+    return sections
+
+
+def parse_story_output(llm_output):
+    """
+    Parse LLM output into structured JSON format.
+    Expects format:
+    {JSON_DASHBOARD}
+    ---NARRATIVE_START---
+    {NARRATIVE_STORY with markdown sections}
+    """
+    try:
+        # Split by narrative marker
+        parts = llm_output.split("---NARRATIVE_START---")
+        
+        json_str = parts[0].strip()
+        narrative_str = parts[1].strip() if len(parts) > 1 else ""
+        
+        # Try to parse JSON
+        try:
+            json_dashboard = json.loads(json_str)
+        except json.JSONDecodeError:
+            # Try replacing single quotes with double quotes for malformed JSON
+            try:
+                json_str_fixed = json_str.replace("'", '"')
+                json_dashboard = json.loads(json_str_fixed)
+            except json.JSONDecodeError:
+                # If that fails, try to extract JSON object
+                json_match = re.search(r'\{.*\}', json_str, re.DOTALL)
+                if json_match:
+                    json_str_fixed = json_match.group(0).replace("'", '"')
+                    json_dashboard = json.loads(json_str_fixed)
+                else:
+                    json_dashboard = {"error": "Could not parse JSON from LLM output"}
+        
+        # Parse narrative sections
+        narrative_sections = parse_narrative_sections(narrative_str)
+        
+        return {
+            "dashboard": json_dashboard,
+            "narrative": {
+                "raw": narrative_str,
+                "sections": narrative_sections
+            }
+        }
+    except Exception as e:
+        # Fallback if parsing completely fails
+        return {
+            "dashboard": {
+                "title": "Geospatial Risk Intelligence Report",
+                "error": f"Failed to parse LLM output: {str(e)}"
+            },
+            "narrative": {
+                "raw": llm_output,
+                "sections": {}
+            },
+            "raw_output": llm_output
+        }
 
 
 def generate_story(entities, risk, geo, clusters, summary):
@@ -163,6 +256,4 @@ Example:
 
     llm_output = call_llm(prompt)
 
-    return {
-        "event_summary": llm_output
-    }
+    return parse_story_output(llm_output)

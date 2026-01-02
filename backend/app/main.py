@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.nlp.extractor import extract_entities
 from app.risk.classifier import classify_risk
 from app.geo.geocode import geocode_locations, to_geojson
@@ -15,6 +16,15 @@ app = FastAPI(
     title="PuviIntel",
     description="Unstructured Text to Geospatial Intelligence API",
     version="0.2.0"
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 #Demo
