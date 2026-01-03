@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { API_URL } from '../config';
 import './Home.css';
 
 const Home = () => {
@@ -29,7 +30,7 @@ const Home = () => {
     setError('');
 
     try {
-      const response = await axios.post('http://localhost:8000/analyze', {
+      const response = await axios.post(`${API_URL}/analyze`, {
         text: text,
         llm_token: llmToken
       });

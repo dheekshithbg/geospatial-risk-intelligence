@@ -11,6 +11,10 @@ from app.utils import clean_geocoded_data as clean_geo_points
 from app.visualization.map import generate_map
 from app.story.story_engine import generate_story
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI(
     title="PuviIntel",
@@ -18,10 +22,15 @@ app = FastAPI(
     version="0.2.0"
 )
 
-# Configure CORS
+# Configure CORS from environment variables
+allowed_origins = os.getenv(
+    "CORS_ORIGINS", 
+    "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
