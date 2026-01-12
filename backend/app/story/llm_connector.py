@@ -2,7 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 
-LLM_URL = "https://llmfoundry.straive.com/groq/openai/v1/chat/completions"
+LLM_URL = os.getenv("LLM_URL")
 
 PROJECT_ID = "puviintel"   
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -53,3 +53,4 @@ def call_llm(prompt: str, token: str = None):
     
     except Exception as e:
         return f"LLM Request Failed: {e}"
+
